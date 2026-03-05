@@ -1617,6 +1617,16 @@ function ToolTitle(props: { fallback: string; when: any; icon: string; children:
   )
 }
 
+function toolTimestamp(part: ToolPart): string | undefined {
+  const state = part.state
+  if (state.status === "pending") return undefined
+  const start = state.time.start
+  if (state.status === "running") return Locale.time(start)
+  const end = state.time.end
+  const dur = end - start
+  return `${Locale.time(start)} · ${Locale.duration(dur)}`
+}
+
 function InlineTool(props: {
   icon: string
   iconColor?: RGBA
@@ -1651,6 +1661,8 @@ function InlineTool(props: {
       error()?.includes("specified a rule") ||
       error()?.includes("user dismissed"),
   )
+
+  const timestamp = createMemo(() => (ctx.showTimestamps() ? toolTimestamp(props.part) : undefined))
 
   return (
     <box
@@ -1687,6 +1699,9 @@ function InlineTool(props: {
           <text paddingLeft={3} fg={fg()} attributes={denied() ? TextAttributes.STRIKETHROUGH : undefined}>
             <Show fallback={<>~ {props.pending}</>} when={props.complete}>
               <span style={{ fg: props.iconColor }}>{props.icon}</span> {props.children}
+              <Show when={timestamp()}>
+                <span style={{ fg: theme.textMuted }}> · {timestamp()}</span>
+              </Show>
             </Show>
           </text>
         </Match>
@@ -1706,9 +1721,11 @@ function BlockTool(props: {
   spinner?: boolean
 }) {
   const { theme } = useTheme()
+  const ctx = use()
   const renderer = useRenderer()
   const [hover, setHover] = createSignal(false)
   const error = createMemo(() => (props.part?.state.status === "error" ? props.part.state.error : undefined))
+  const timestamp = createMemo(() => (ctx.showTimestamps() && props.part ? toolTimestamp(props.part) : undefined))
   return (
     <box
       border={["left"]}
@@ -1732,6 +1749,9 @@ function BlockTool(props: {
         fallback={
           <text paddingLeft={3} fg={theme.textMuted}>
             {props.title}
+            <Show when={timestamp()}>
+              <span style={{ fg: theme.textMuted }}> · {timestamp()}</span>
+            </Show>
           </text>
         }
       >
