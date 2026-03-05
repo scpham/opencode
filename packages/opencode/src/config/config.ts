@@ -20,6 +20,7 @@ import {
   printParseErrorCode,
 } from "jsonc-parser"
 import { Instance } from "../project/instance"
+import { Env } from "../env"
 import { LSPServer } from "../lsp/server"
 import { BunProc } from "@/bun"
 import { Installation } from "@/installation"
@@ -87,7 +88,7 @@ export namespace Config {
     for (const [key, value] of Object.entries(auth)) {
       if (value.type === "wellknown") {
         const url = key.replace(/\/+$/, "")
-        process.env[value.key] = value.token
+        Env.set(value.key, value.token)
         log.debug("fetching remote config", { url: `${url}/.well-known/opencode` })
         const response = await fetch(`${url}/.well-known/opencode`)
         if (!response.ok) {

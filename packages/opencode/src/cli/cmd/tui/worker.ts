@@ -7,7 +7,7 @@ import { Rpc } from "@/util/rpc"
 import { upgrade } from "@/cli/upgrade"
 import { Config } from "@/config/config"
 import { GlobalBus } from "@/bus/global"
-import { createOpencodeClient, type Event } from "@opencode-ai/sdk/v2"
+import { type Event } from "@opencode-ai/sdk/v2"
 import type { BunWebSocketData } from "hono/bun"
 import { Flag } from "@/flag/flag"
 
@@ -32,69 +32,14 @@ process.on("uncaughtException", (e) => {
   })
 })
 
-// Subscribe to global events and forward them via RPC
+// Forward all events from all instances to the TUI via RPC.
+// GlobalBus receives events from every active Instance (directory),
+// so the TUI gets cross-directory event visibility.
 GlobalBus.on("event", (event) => {
-  Rpc.emit("global.event", event)
+  Rpc.emit("event", event.payload as Event)
 })
 
 let server: Bun.Server<BunWebSocketData> | undefined
-
-const eventStream = {
-  abort: undefined as AbortController | undefined,
-}
-
-const startEventStream = (directory: string) => {
-  if (eventStream.abort) eventStream.abort.abort()
-  const abort = new AbortController()
-  eventStream.abort = abort
-  const signal = abort.signal
-
-  const fetchFn = (async (input: RequestInfo | URL, init?: RequestInit) => {
-    const request = new Request(input, init)
-    const auth = getAuthorizationHeader()
-    if (auth) request.headers.set("Authorization", auth)
-    return Server.App().fetch(request)
-  }) as typeof globalThis.fetch
-
-  const sdk = createOpencodeClient({
-    baseUrl: "http://opencode.internal",
-    directory,
-    fetch: fetchFn,
-    signal,
-  })
-
-  ;(async () => {
-    while (!signal.aborted) {
-      const events = await Promise.resolve(
-        sdk.event.subscribe(
-          {},
-          {
-            signal,
-          },
-        ),
-      ).catch(() => undefined)
-
-      if (!events) {
-        await Bun.sleep(250)
-        continue
-      }
-
-      for await (const event of events.stream) {
-        Rpc.emit("event", event as Event)
-      }
-
-      if (!signal.aborted) {
-        await Bun.sleep(250)
-      }
-    }
-  })().catch((error) => {
-    Log.Default.error("event stream error", {
-      error: error instanceof Error ? error.message : error,
-    })
-  })
-}
-
-startEventStream(process.cwd())
 
 export const rpc = {
   async fetch(input: { url: string; method: string; headers: Record<string, string>; body?: string }) {
@@ -136,7 +81,6 @@ export const rpc = {
   },
   async shutdown() {
     Log.Default.info("worker shutting down")
-    if (eventStream.abort) eventStream.abort.abort()
     await Instance.disposeAll()
     if (server) server.stop(true)
   },
