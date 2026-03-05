@@ -230,40 +230,39 @@ The sync store can check `_directory` for directory-scoped events and ignore if 
 ## Implementation Order
 
 ```
-Phase 1 (Process safety)     ← Do first, unblocks everything
-  1.1 Provider env scoping
-  1.2 Shell env audit
+Phase 1 (Process safety)       [DONE]
+  1.1 Provider env scoping     [DONE]
+  1.2 Shell env audit          [DONE] - Env.all() propagated to bash.ts and pty/index.ts
 
-Phase 2 (Event plumbing)     ← Needed for any multi-session UX
-  2.1 Worker GlobalBus fix
-  2.2 SSE global mode
-  2.3 Sync store filtering
+Phase 2 (Event plumbing)       [DONE]
+  2.1 Worker GlobalBus fix     [DONE]
+  2.2 SSE global mode          [SKIPPED] - Not needed; worker RPC path covers the TUI
+  2.3 Sync store filtering     [DONE]
 
-Phase 3 (Concurrent execution) ← Core feature
-  3.1 Remove BusyError
-  3.2 Concurrency limit
+Phase 3 (Concurrent execution) [NO CHANGE NEEDED]
+  3.1 BusyError audit          [DONE] - Already per-sessionID, not global. Multiple sessions can run.
+  3.2 Concurrency limit        [DEFERRED] - Optional safeguard, not a blocker
 
-Phase 4 (TUI polish)          ← User-facing improvements
-  4.1 Status indicators
-  4.2 Background notifications
+Phase 4 (TUI polish)           [DONE]
+  4.1 Status indicators        [ALREADY EXISTS] - dialog-session-list.tsx already shows Spinner for busy
+  4.2 Background notifications [DONE]
 
-Phase 5 (SDK/directory)       ← Mostly already works
-  5.1 Verify SDK headers
-  5.2 Per-session directory tracking
+Phase 5 (SDK/directory)        [NO CHANGE NEEDED]
+  5.1 Verify SDK headers       [DONE] - Already sends x-opencode-directory per request
+  5.2 Per-session directory     [ALREADY EXISTS] - Sessions have directory field in schema
 ```
 
 ## Files Changed Summary
 
 | File | Phase | Change Type |
 |------|-------|-------------|
-| `src/provider/provider.ts` | 1.1 | Pass credentials via SDK options, not process.env |
-| `src/config/config.ts` | 1.1 | Store tokens in Instance.state, not process.env |
-| `src/cli/cmd/tui/worker.ts` | 2.1 | Use GlobalBus → emit as "event" with directory |
-| `src/server/server.ts` | 2.2 | Add `?global=true` SSE mode |
-| `src/cli/cmd/tui/context/sync.tsx` | 2.3 | Filter directory-scoped events |
-| `src/session/prompt.ts` | 3.1 | Remove assertNotBusy, allow concurrent loops |
-| `src/cli/cmd/tui/component/dialog-session-list.tsx` | 4.1 | Show session status badges |
-| `src/cli/cmd/tui/app.tsx` | 4.2 | Background session completion toasts |
+| `src/provider/provider.ts` | 1.1 | Use Env.get/set instead of process.env for auth tokens |
+| `src/config/config.ts` | 1.1 | Use Env.set instead of process.env for wellknown tokens |
+| `src/tool/bash.ts` | 1.2 | Spread Env.all() into child process env |
+| `src/pty/index.ts` | 1.2 | Spread Env.all() into PTY process env |
+| `src/cli/cmd/tui/worker.ts` | 2.1+2.3 | Use GlobalBus directly, attach _directory to events |
+| `src/cli/cmd/tui/context/sync.tsx` | 2.3 | Filter lsp/vcs events by _directory |
+| `src/cli/cmd/tui/app.tsx` | 4.2 | Toast on background session completion |
 
 ## Risks and Mitigations
 

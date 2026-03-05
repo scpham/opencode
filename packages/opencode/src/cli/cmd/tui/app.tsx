@@ -31,6 +31,7 @@ import { DialogAlert } from "./ui/dialog-alert"
 import { ToastProvider, useToast } from "./ui/toast"
 import { ExitProvider, useExit } from "./context/exit"
 import { Session as SessionApi } from "@/session"
+import { SessionStatus } from "@/session/status"
 import { TuiEvent } from "./event"
 import { KVProvider, useKV } from "./context/kv"
 import { Provider } from "@/provider/provider"
@@ -721,6 +722,20 @@ function App() {
     toast.show({
       variant: "error",
       message,
+      duration: 5000,
+    })
+  })
+
+  sdk.event.on(SessionStatus.Event.Status.type, (evt) => {
+    if (evt.properties.status.type !== "idle") return
+    const currentSessionID = route.data.type === "session" ? route.data.sessionID : undefined
+    if (evt.properties.sessionID === currentSessionID) return
+    const session = sync.session.get(evt.properties.sessionID)
+    if (!session) return
+    const title = SessionApi.isDefaultTitle(session.title) ? "Session" : session.title
+    toast.show({
+      variant: "info",
+      message: `${title} completed`,
       duration: 5000,
     })
   })

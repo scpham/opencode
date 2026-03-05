@@ -35,8 +35,11 @@ process.on("uncaughtException", (e) => {
 // Forward all events from all instances to the TUI via RPC.
 // GlobalBus receives events from every active Instance (directory),
 // so the TUI gets cross-directory event visibility.
+// We attach _directory so the TUI can filter directory-scoped events.
 GlobalBus.on("event", (event) => {
-  Rpc.emit("event", event.payload as Event)
+  const payload = event.payload as Event & { _directory?: string }
+  if (event.directory) payload._directory = event.directory
+  Rpc.emit("event", payload)
 })
 
 let server: Bun.Server<BunWebSocketData> | undefined

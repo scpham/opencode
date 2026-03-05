@@ -332,11 +332,16 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
         }
 
         case "lsp.updated": {
+          // Only apply directory-scoped events from the current directory
+          const lspDir = (event as any)._directory
+          if (lspDir && store.path.directory && lspDir !== store.path.directory) break
           sdk.client.lsp.status().then((x) => setStore("lsp", x.data!))
           break
         }
 
         case "vcs.branch.updated": {
+          const vcsDir = (event as any)._directory
+          if (vcsDir && store.path.directory && vcsDir !== store.path.directory) break
           setStore("vcs", { branch: event.properties.branch })
           break
         }
