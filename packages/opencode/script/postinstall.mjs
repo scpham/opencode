@@ -114,6 +114,7 @@ async function main() {
     try {
       fs.linkSync(binaryPath, target)
     } catch {
+      if (fs.existsSync(target)) fs.unlinkSync(target)
       fs.copyFileSync(binaryPath, target)
     }
     fs.chmodSync(target, 0o755)

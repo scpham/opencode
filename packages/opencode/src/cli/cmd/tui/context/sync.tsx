@@ -103,11 +103,13 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
     })
 
     const sdk = useSDK()
+    const fullSyncedSessions = new Set<string>()
 
     sdk.event.listen((e) => {
       const event = e.details
       switch (event.type) {
         case "server.instance.disposed":
+          fullSyncedSessions.clear()
           bootstrap()
           break
         case "permission.replied": {
@@ -436,7 +438,6 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       bootstrap()
     })
 
-    const fullSyncedSessions = new Set<string>()
     const result = {
       data: store,
       set: setStore,

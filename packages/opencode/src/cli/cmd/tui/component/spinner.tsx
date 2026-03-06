@@ -3,7 +3,6 @@ import { useTheme } from "../context/theme"
 import { useKV } from "../context/kv"
 import type { JSX } from "@opentui/solid"
 import type { RGBA } from "@opentui/core"
-import "opentui-spinner/solid"
 
 const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
 

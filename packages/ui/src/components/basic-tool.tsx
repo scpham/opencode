@@ -25,6 +25,7 @@ export interface BasicToolProps {
   trigger: TriggerTitle | JSX.Element
   children?: JSX.Element
   status?: string
+  duration?: string
   hideDetails?: boolean
   defaultOpen?: boolean
   forceOpen?: boolean
@@ -179,6 +180,9 @@ export function BasicTool(props: BasicToolProps) {
           <Show when={props.children && !props.hideDetails && !props.locked && !pending()}>
             <Collapsible.Arrow />
           </Show>
+          <Show when={!pending() && props.duration}>
+            <span data-slot="basic-tool-duration">{props.duration}</span>
+          </Show>
         </div>
       </Collapsible.Trigger>
       <Show when={props.animated && props.children && !props.hideDetails}>
@@ -203,6 +207,14 @@ export function BasicTool(props: BasicToolProps) {
   )
 }
 
-export function GenericTool(props: { tool: string; status?: string; hideDetails?: boolean }) {
-  return <BasicTool icon="mcp" status={props.status} trigger={{ title: props.tool }} hideDetails={props.hideDetails} />
+export function GenericTool(props: { tool: string; status?: string; duration?: string; hideDetails?: boolean }) {
+  return (
+    <BasicTool
+      icon="mcp"
+      status={props.status}
+      duration={props.duration}
+      trigger={{ title: props.tool }}
+      hideDetails={props.hideDetails}
+    />
+  )
 }

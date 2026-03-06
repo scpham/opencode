@@ -1,4 +1,5 @@
-import { render, useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/solid"
+import { render, useKeyboard, useRenderer, useTerminalDimensions, extend } from "@opentui/solid"
+import { SpinnerRenderable } from "opentui-spinner"
 import { Clipboard } from "@tui/util/clipboard"
 import { Selection } from "@tui/util/selection"
 import { MouseButton, TextAttributes } from "@opentui/core"
@@ -41,6 +42,8 @@ import { writeHeapSnapshot } from "v8"
 import { PromptRefProvider, usePromptRef } from "./context/prompt"
 import { TuiConfigProvider } from "./context/tui-config"
 import { TuiConfig } from "@/config/tui"
+
+extend({ spinner: SpinnerRenderable })
 
 async function getTerminalBackgroundColor(): Promise<"dark" | "light"> {
   // can't set raw mode if not a TTY

@@ -1635,6 +1635,7 @@ function InlineTool(props: {
   spinner?: boolean
   children: JSX.Element
   part: ToolPart
+  onClick?: () => void
 }) {
   const [margin, setMargin] = createSignal(0)
   const { theme } = useTheme()
@@ -1663,11 +1664,20 @@ function InlineTool(props: {
   )
 
   const timestamp = createMemo(() => (ctx.showTimestamps() ? toolTimestamp(props.part) : undefined))
+  const renderer = useRenderer()
+  const [hover, setHover] = createSignal(false)
 
   return (
     <box
       marginTop={margin()}
       paddingLeft={3}
+      backgroundColor={hover() ? theme.backgroundMenu : undefined}
+      onMouseOver={() => props.onClick && setHover(true)}
+      onMouseOut={() => setHover(false)}
+      onMouseUp={() => {
+        if (renderer.getSelection()?.getSelectedText()) return
+        props.onClick?.()
+      }}
       renderBefore={function () {
         const el = this as BoxRenderable
         const parent = el.parent
@@ -2019,6 +2029,9 @@ function Task(props: ToolProps<typeof TaskTool>) {
       complete={props.input.description}
       pending="Delegating..."
       part={props.part}
+      onClick={
+        props.metadata.sessionId ? () => navigate({ type: "session", sessionID: props.metadata.sessionId! }) : undefined
+      }
     >
       {content()}
     </InlineTool>

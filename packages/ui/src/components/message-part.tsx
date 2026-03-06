@@ -1031,6 +1031,7 @@ export interface ToolProps {
   tool: string
   output?: string
   status?: string
+  duration?: string
   hideDetails?: boolean
   defaultOpen?: boolean
   forceOpen?: boolean
@@ -1113,6 +1114,35 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
   // @ts-expect-error
   const partMetadata = () => part().state?.metadata ?? emptyMetadata
 
+  // tick every second while the tool is running
+  const [now, setNow] = createSignal(Date.now())
+  createEffect(() => {
+    if (part().state.status !== "running") return
+    const t = setInterval(() => setNow(Date.now()), 1000)
+    onCleanup(() => clearInterval(t))
+  })
+
+  const duration = createMemo(() => {
+    const s = part().state
+    if (s.status === "pending") return undefined
+    if (s.status === "running") {
+      const elapsed = now() - s.time.start
+      const total = Math.floor(elapsed / 1000)
+      if (total < 60) return `${total}s`
+      const minutes = Math.floor(total / 60)
+      const seconds = total % 60
+      return `${minutes}m ${seconds}s`
+    }
+    const ms = s.time.end - s.time.start
+    if (!(ms >= 0)) return undefined
+    const total = Math.round(ms / 1000)
+    if (total < 1) return `${ms}ms`
+    if (total < 60) return `${total}s`
+    const minutes = Math.floor(total / 60)
+    const seconds = total % 60
+    return `${minutes}m ${seconds}s`
+  })
+
   const render = createMemo(() => ToolRegistry.render(part().tool) ?? GenericTool)
 
   return (
@@ -1161,6 +1191,7 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
               // @ts-expect-error
               output={part().state.output}
               status={part().state.status}
+              duration={duration()}
               hideDetails={props.hideDetails}
               defaultOpen={props.defaultOpen}
             />
