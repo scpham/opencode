@@ -1120,11 +1120,36 @@ export namespace Provider {
           }
         }
 
-        return fetchFn(input, {
+        const resp = await fetchFn(input, {
           ...opts,
           // @ts-ignore see here: https://github.com/oven-sh/bun/issues/16682
           timeout: false,
         })
+
+        // On 401, if this provider has a cmd-based apiKey, refresh the token
+        // and retry once. This handles short-lived OAuth tokens (e.g. 1hr TTL).
+        if (resp.status === 401 && options["apiKeyCmd"]) {
+          const cmd = options["apiKeyCmd"] as string
+          log.info("token expired, refreshing via apiKeyCmd", { providerID: model.providerID })
+          const proc = Bun.spawnSync(["sh", "-c", cmd], { stderr: "pipe" })
+          const token = proc.stdout.toString().trim()
+          if (token) {
+            options["apiKey"] = token
+            // Bust the SDK cache so future requests pick up the new token
+            const s = await state()
+            s.sdk.delete(key)
+            const headers = (opts.headers as Record<string, string>) ?? {}
+            headers["Authorization"] = `Bearer ${token}`
+            return fetchFn(input, {
+              ...opts,
+              headers,
+              // @ts-ignore
+              timeout: false,
+            })
+          }
+        }
+
+        return resp
       }
 
       const bundledFn = BUNDLED_PROVIDERS[model.api.npm]

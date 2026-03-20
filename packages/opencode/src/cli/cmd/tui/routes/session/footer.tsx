@@ -49,9 +49,18 @@ export function Footer() {
     })
   })
 
+  const branch = createMemo(() => sync.data.vcs?.branch)
+
   return (
     <box flexDirection="row" justifyContent="space-between" gap={1} flexShrink={0}>
-      <text fg={theme.textMuted}>{directory()}</text>
+      <box gap={2} flexDirection="row" flexShrink={1} overflow="hidden">
+        <text fg={theme.textMuted}>{directory()}</text>
+        <Show when={branch()}>
+          <text fg={theme.textMuted}>
+            <span style={{ fg: theme.text }}></span> {branch()}
+          </text>
+        </Show>
+      </box>
       <box gap={2} flexDirection="row" flexShrink={0}>
         <Switch>
           <Match when={store.welcome}>

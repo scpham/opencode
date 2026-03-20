@@ -81,11 +81,24 @@ export namespace ConfigPaths {
     return typeof input === "string" ? path.dirname(input) : input.dir
   }
 
-  /** Apply {env:VAR} and {file:path} substitutions to config text. */
+  /** Apply {env:VAR}, {cmd:...} and {file:path} substitutions to config text. */
   async function substitute(text: string, input: ParseSource, missing: "error" | "empty" = "error") {
     text = text.replace(/\{env:([^}]+)\}/g, (_, varName) => {
       return process.env[varName] || ""
     })
+
+    // {cmd:...} — run a shell command and substitute its trimmed stdout.
+    // The original expression is preserved as a sibling `apiKeyCmd` field so
+    // the provider layer can re-run it on 401 to refresh short-lived tokens.
+    const cmdMatches = Array.from(text.matchAll(/"\{cmd:([^}]+)\}"/g))
+    for (const match of cmdMatches) {
+      const [full, cmd] = match
+      const proc = Bun.spawnSync(["sh", "-c", cmd], { stderr: "pipe" })
+      const out = proc.stdout.toString().trim()
+      // Replace the token with the command output, and inject an `apiKeyCmd`
+      // sibling so the provider can re-run it when the token expires.
+      text = text.replace(full, `"${out}", "apiKeyCmd": "${cmd.replace(/"/g, '\\"')}"`)
+    }
 
     const fileMatches = Array.from(text.matchAll(/\{file:[^}]+\}/g))
     if (!fileMatches.length) return text
